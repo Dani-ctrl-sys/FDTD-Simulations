@@ -1,0 +1,11 @@
+# Ejecutables
+*.exe
+*.out
+
+# Archivos de objeto
+*.o
+*.obj
+
+# Cache de Python
+__pycache__/
+*.pyc
