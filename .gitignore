@@ -1,10 +1,5 @@
-# Ejecutables
-*.exe
-*.out
-
-# Archivos de objeto
-*.o
-*.obj
+# Carpeta de compilación
+build/
 
 # Cache de Python
 __pycache__/
