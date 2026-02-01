@@ -29,7 +29,7 @@ X, Y = np.meshgrid(np.arange(0, Ny, step), np.arange(0, Nx, step))
 # Inicializamos el gráfico de flechas (Quiver)
 # scale=0.5 controla el tamaño de la flecha. Menor número = flecha más larga.
 Q = ax.quiver(X, Y, np.zeros_like(X), np.zeros_like(Y), 
-              pivot='mid', color='black', scale=0.2, scale_units='xy')
+              pivot='mid', color='black', scale=0.005, scale_units='xy')
 
 plt.title("Fase 2 (Honores): Campos E y H Acoplados")
 time_text = ax.text(0.02, 0.95, '', transform=ax.transAxes, color='black', weight='bold')
@@ -64,9 +64,9 @@ def update(n):
     Hx_sample = Hx[::step, ::step].T
     Hy_sample = Hy[::step, ::step].T
     
-    # Truco visual: Invertimos componentes para que coincidan con la intuición visual 
-    # de rotación alrededor de Z.
-    Q.set_UVC(Hy_sample, -Hx_sample)
+    # Truco visual: Para ver rotación tangencial alrededor del centro
+    # U = -Hx (horizontal), V = -Hy (vertical) - circulación correcta
+    Q.set_UVC(Hx_sample, Hy_sample)
     
     time_text.set_text(f'Step: {n}')
     
