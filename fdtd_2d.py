@@ -39,7 +39,7 @@ im = ax.imshow(Ez, cmap='RdBu', vmin=-0.05, vmax=0.05, origin='lower', animated=
 # Usamos un contour plot simple sobre la matriz Cb
 ax.contour(Cb.T, levels=[S_courant*0.99], colors='yellow', linewidths=2, origin='lower')
 ax.text(5, 110, "VACÍO (n=1)", color='black', fontsize=10)
-ax.text(105, 110, "VIDRIO\n(n=2)", color='yellow', fontsize=10, ha='center')
+ax.text(105, 110, "VIDRIO\n(n=2)", color='black', fontsize=10, ha='center')
 
 # B. CAPA 2: Magnética (Flechas)
 step = 8 
