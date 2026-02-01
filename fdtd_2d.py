@@ -1,59 +1,81 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 # --- 1. CONFIGURACIÓN DEL UNIVERSO ---
-Nx = 200        # Tamaño en X (Filas)
-Ny = 200        # Tamaño en Y (Columnas)
-T_STEPS = 300   # Pasos temporales
+Nx = 200
+Ny = 200
+T_STEPS = 300
 
-# Campos (Matrices 2D inicializadas a 0.0)
-# Ez: Eje Z (Scalar field - Nodos enteros)
+# Campos
 Ez = np.zeros((Nx, Ny))
-
-# Hx, Hy: Componentes magnéticas (Nodos desplazados +0.5)
 Hx = np.zeros((Nx, Ny))
 Hy = np.zeros((Nx, Ny))
 
-# Constantes Físicas (Unidades normalizadas)
-# Courant (S) = c * dt / ds <= 1/sqrt(2) ≈ 0.707 en 2D
-ds = 1.0        
-dt = 0.5        
-c = 1.0         
+# Constantes
+coef = 0.5  # Courant / Magic Step
 
-# Coeficiente de actualización (Simplificado para vacío)
-# update_coeff = c * dt / ds = 0.5
-coef = 0.5 
+# --- 2. PREPARACIÓN DE LA CÁMARA (MATPLOTLIB) ---
+fig, ax = plt.subplots(figsize=(7, 7))
 
-print(f"Sistema inicializado: {Nx}x{Ny}. Iniciando bucle temporal...")
+# A. CAPA 1: Eléctrica (Mapa de Calor)
+im = ax.imshow(Ez, cmap='RdBu', vmin=-0.05, vmax=0.05, origin='lower', animated=True)
 
-# --- 2. BUCLE DE TIEMPO PRINCIPAL (LEAPFROG) ---
-for n in range(T_STEPS):
-    
-    # --- A. Actualizar Campos Magnéticos (H) ---
-    # Momento: n + 0.5
-    
-    # Hx depende de -dEz/dy (Diferencia de Columnas)
-    # C++: Hx[i][j] = Hx[i][j] - 0.5 * (Ez[i][j+1] - Ez[i][j])
+# B. CAPA 2: Magnética (Vectores / Flechas)
+# "step" define cada cuántos píxeles dibujamos una flecha (para no saturar)
+step = 8
+# Creamos la rejilla de coordenadas para las flechas
+X, Y = np.meshgrid(np.arange(0, Ny, step), np.arange(0, Nx, step))
+
+# Inicializamos el gráfico de flechas (Quiver)
+# scale=0.5 controla el tamaño de la flecha. Menor número = flecha más larga.
+Q = ax.quiver(X, Y, np.zeros_like(X), np.zeros_like(Y), pivot='mid', color='black', scale=0.2, scale_units='xy')
+
+plt.title("Fase 2 (Honores): Campos E y H Acoplados")
+plt.colorbar(im, label='Amplitud Ez')
+
+# Texto para mostrar el paso de tiempo
+time_text = ax.text(0.02, 0.95, '', transform=ax.transAxes, color='black')
+
+# --- 3. MOTOR DE FÍSICA (KERNEL) ---
+def update(n):
+    # A. Actualizar H (Magnético)
     Hx[:, :-1] -= coef * (Ez[:, 1:] - Ez[:, :-1])
-    
-    # Hy depende de +dEz/dx (Diferencia de Filas)
-    # C++: Hy[i][j] = Hy[i][j] + 0.5 * (Ez[i+1][j] - Ez[i][j])
     Hy[:-1, :] += coef * (Ez[1:, :] - Ez[:-1, :])
     
-    # --- B. Actualizar Campo Eléctrico (E) ---
-    # Momento: n + 1
-    
-    # Ez depende de (dHy/dx - dHx/dy) (Curl de H)
-    # C++: Ez[i][j] += 0.5 * ((Hy[i][j] - Hy[i-1][j]) - (Hx[i][j] - Hx[i][j-1]))
-    # NOTA: Usamos slicing [1:-1] para evitar fronteras y problemas de índice -1
+    # B. Actualizar E (Eléctrico)
     Ez[1:-1, 1:-1] += coef * (
-        (Hy[1:-1, 1:-1] - Hy[:-2, 1:-1]) - # dHy/dx (Filas: actual - anterior)
-        (Hx[1:-1, 1:-1] - Hx[1:-1, :-2])   # dHx/dy (Cols: actual - anterior)
+        (Hy[1:-1, 1:-1] - Hy[:-2, 1:-1]) - 
+        (Hx[1:-1, 1:-1] - Hx[1:-1, :-2])   
     )
     
-    # --- C. Fuente (Source) ---
-    # Inyectamos un pulso Gaussiano en el centro
-    # np.exp es la versión vectorizada de std::exp
+    # C. Fuente (Source) - Pulso Gaussiano en el centro
     pulse = np.exp(-0.5 * ((n - 40) / 10) ** 2)
     Ez[Nx//2, Ny//2] += pulse
+    
+    # --- RENDERIZADO AVANZADO ---
+    
+    # 1. Actualizar Calor (Ez)
+    im.set_array(Ez.T)
+    
+    # 2. Actualizar Flechas (Hx, Hy)
+    # Tomamos una muestra cada 'step' píxeles y transponemos (.T)
+    # Nota: Hx es el vector horizontal en la gráfica visual si Hy apunta en Y.
+    # En FDTD 2D TMz:
+    # Vector U (Horizontal visual) = Hy
+    # Vector V (Vertical visual)   = -Hx  (Por la regla de la mano derecha y ejes)
+    
+    Hx_sample = Hx[::step, ::step].T
+    Hy_sample = Hy[::step, ::step].T
+    
+    # Truco visual: Invertimos componentes para que coincidan con la intuición visual 
+    # de rotación alrededor de Z.
+    Q.set_UVC(Hy_sample, -Hx_sample)
+    
+    time_text.set_text(f'Step: {n}')
+    
+    return im, Q, time_text
 
-print("Simulación completada (Cálculos realizados en memoria).")
+# --- 4. ARRANQUE ---
+anim = animation.FuncAnimation(fig, update, frames=T_STEPS, interval=30, blit=True)
+plt.show()
