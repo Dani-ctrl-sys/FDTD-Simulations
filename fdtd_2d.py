@@ -5,17 +5,16 @@ import matplotlib.animation as animation
 # --- 1. CONFIGURACIÓN DEL UNIVERSO ---
 Nx = 200
 Ny = 200
-T_STEPS = 300
+T_STEPS = 200
 
-# Campos
 Ez = np.zeros((Nx, Ny))
 Hx = np.zeros((Nx, Ny))
 Hy = np.zeros((Nx, Ny))
 
-# Constantes
-coef = 0.5  # Courant / Magic Step
+# Constantes (Vacío)
+coef = 0.5 
 
-# --- 2. PREPARACIÓN DE LA CÁMARA (MATPLOTLIB) ---
+# --- 2. CONFIGURACIÓN GRÁFICA (Visualización Doble) ---
 fig, ax = plt.subplots(figsize=(7, 7))
 
 # A. CAPA 1: Eléctrica (Mapa de Calor)
@@ -23,33 +22,30 @@ im = ax.imshow(Ez, cmap='RdBu', vmin=-0.05, vmax=0.05, origin='lower', animated=
 
 # B. CAPA 2: Magnética (Vectores / Flechas)
 # "step" define cada cuántos píxeles dibujamos una flecha (para no saturar)
-step = 8
+step = 8 
 # Creamos la rejilla de coordenadas para las flechas
 X, Y = np.meshgrid(np.arange(0, Ny, step), np.arange(0, Nx, step))
 
 # Inicializamos el gráfico de flechas (Quiver)
 # scale=0.5 controla el tamaño de la flecha. Menor número = flecha más larga.
-Q = ax.quiver(X, Y, np.zeros_like(X), np.zeros_like(Y), pivot='mid', color='black', scale=0.2, scale_units='xy')
+Q = ax.quiver(X, Y, np.zeros_like(X), np.zeros_like(Y), 
+              pivot='mid', color='black', scale=0.2, scale_units='xy')
 
 plt.title("Fase 2 (Honores): Campos E y H Acoplados")
-plt.colorbar(im, label='Amplitud Ez')
+time_text = ax.text(0.02, 0.95, '', transform=ax.transAxes, color='black', weight='bold')
 
-# Texto para mostrar el paso de tiempo
-time_text = ax.text(0.02, 0.95, '', transform=ax.transAxes, color='black')
-
-# --- 3. MOTOR DE FÍSICA (KERNEL) ---
+# --- 3. KERNEL DE FÍSICA ---
 def update(n):
-    # A. Actualizar H (Magnético)
+    # --- FÍSICA (Igual que antes) ---
     Hx[:, :-1] -= coef * (Ez[:, 1:] - Ez[:, :-1])
     Hy[:-1, :] += coef * (Ez[1:, :] - Ez[:-1, :])
     
-    # B. Actualizar E (Eléctrico)
     Ez[1:-1, 1:-1] += coef * (
         (Hy[1:-1, 1:-1] - Hy[:-2, 1:-1]) - 
         (Hx[1:-1, 1:-1] - Hx[1:-1, :-2])   
     )
     
-    # C. Fuente (Source) - Pulso Gaussiano en el centro
+    # Fuente
     pulse = np.exp(-0.5 * ((n - 40) / 10) ** 2)
     Ez[Nx//2, Ny//2] += pulse
     
