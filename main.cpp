@@ -94,7 +94,11 @@ void save_frame(const std::vector<double>& field, int w, int h, int step) {
             }
 
             // Detectar Muro de Vidrio (Dibujar línea amarilla tenue en x=100 y x=140)
-            if (x == 100 || x == 140) { g = 150; } 
+            if (x == 100 || x == 140) { 
+                r = 255; // Encendemos Rojo
+                g = 255; // Encendemos Verde
+                b = 0;   // Apagamos Azul para limpiar
+            }
 
             file << r << g << b;
         }
