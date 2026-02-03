@@ -34,8 +34,8 @@ struct FDTDEngine {
         }
 
         // 2. DEFINICIÓN DE FRONTERAS ABSORBENTES
-        // Marco de 20 píxeles que "mata" las ondas
-        int margin = 20;
+        // Marco de 40 píxeles que "mata" las ondas
+        int margin = 40;
         for(int y=0; y<h; ++y) {
             for(int x=0; x<w; ++x) {
                 // Distancia al borde más cercano
@@ -47,7 +47,7 @@ struct FDTDEngine {
                     // Factor de pérdida: 0.0 en el interior, sube hasta 0.1 en el borde
                     // Usamos una curva cúbica para que sea suave y no rebote
                     double factor = (double)(margin - dist) / margin;
-                    Loss[y*w + x] = 0.1 * factor * factor * factor;
+                    Loss[y*w + x] = 0.3 * factor * factor * factor;
                 }
             }
         }
