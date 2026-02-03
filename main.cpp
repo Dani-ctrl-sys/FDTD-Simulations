@@ -16,6 +16,7 @@ constexpr int T_STEPS = 500;
 struct FDTDEngine {
     int w, h;
     std::vector<double> Ez, Hx, Hy, Cb;
+    std::vector<double> Loss; // Mapa de Pérdidas (Conductividad)
 
     FDTDEngine(int width, int height) : w(width), h(height) {
         size_t size = w * h;
@@ -23,13 +24,31 @@ struct FDTDEngine {
         Hx.resize(size, 0.0);
         Hy.resize(size, 0.0);
         Cb.assign(size, 0.5); 
+        Loss.assign(size, 0.0); // Por defecto, nadie pierde energía
         
-        // [DEFINICIÓN DEL MATERIAL - FASE 3]
-        // Bloque de "Vidrio" (n=2 -> epsilon=4)
-        // Rectángulo entre x=100 y x=140
+        // 1. DEFINICIÓN DEL MATERIAL (VIDRIO)
         for(int y=0; y<h; ++y) {
             for(int x=100; x<140; ++x) {
-                Cb[y*w + x] = 0.5 / 4.0; // S_courant / epsilon_r
+                Cb[y*w + x] = 0.5 / 4.0; // Vidrio n=2
+            }
+        }
+
+        // 2. DEFINICIÓN DE FRONTERAS ABSORBENTES
+        // Marco de 20 píxeles que "mata" las ondas
+        int margin = 20;
+        for(int y=0; y<h; ++y) {
+            for(int x=0; x<w; ++x) {
+                // Distancia al borde más cercano
+                int dist_x = std::min(x, w - 1 - x);
+                int dist_y = std::min(y, h - 1 - y);
+                int dist = std::min(dist_x, dist_y);
+
+                if (dist < margin) {
+                    // Factor de pérdida: 0.0 en el interior, sube hasta 0.1 en el borde
+                    // Usamos una curva cúbica para que sea suave y no rebote
+                    double factor = (double)(margin - dist) / margin;
+                    Loss[y*w + x] = 0.1 * factor * factor * factor;
+                }
             }
         }
     }
@@ -49,19 +68,26 @@ struct FDTDEngine {
                 Hy[idx(x, y)] += 0.5 * (Ez[idx(x + 1, y)] - Ez[idx(x, y)]);
             }
         }
-        // Ez + Materiales
+        // Ez + MATERIALES + PÉRDIDAS
         for (int y = 1; y < h - 1; ++y) {
             for (int x = 1; x < w - 1; ++x) {
                 size_t i = idx(x, y);
-                Ez[i] += Cb[i] * ((Hy[i] - Hy[idx(x-1, y)]) - (Hx[i] - Hx[idx(x, y-1)]));
+                
+                // Paso 1: Calcular el rotacional (la física estándar)
+                double curl = (Hy[i] - Hy[idx(x-1, y)]) - (Hx[i] - Hx[idx(x, y-1)]);
+                
+                // Paso 2: Aplicar la física
+                // Ez_new = Ez_old * (1 - loss) + Cb * curl
+                // El término (1 - Loss[i]) hace que la onda se atenúe suavemente
+                Ez[i] = Ez[i] * (1.0 - Loss[i]) + Cb[i] * curl;
             }
         }
     }
     
     void inject_source(int t) {
-        // Fuente desplazada a la izquierda (x=50) para ver el choque
+        // Fuente movida al centro para ver cómo viaja hacia los bordes
         double pulse = exp(-0.5 * pow((t - 40.0) / 10.0, 2.0));
-        Ez[idx(50, Ny/2)] += pulse;
+        Ez[idx(Nx/2, Ny/2)] += pulse; 
     }
 };
 

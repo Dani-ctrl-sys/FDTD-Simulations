@@ -4,3 +4,11 @@ build/
 # Cache de Python
 __pycache__/
 *.pyc
+
+# Generated FDTD simulation files
+*.ppm
+*.png
+*.gif
+frames/
+output/
+*.exe
